@@ -93,3 +93,8 @@ The [tests/](./tests/) folder contains example programs, including
   under `tests/` is for performance comparisons and checks workload results.
 
 These are current project limitations, not promises about future versions.
+
+
+
+## notice
+if go through the code you will realize i didnt use any advanced algorithms i just did the logic with naive solutions for one its very complex and tudious  for me two i want to grasp the logic and how it all works and then later optimize using good and well srtuctured algorithms 

@@ -1,0 +1,15 @@
+let int a = 10
+let int b = 20
+let int c = 30
+let int d = 40
+let int e = 50
+
+let int i = 0
+let int result = 0
+
+while (i < 1000000) do {
+    result = a + b + c + d + e
+    i = i + 1
+}
+
+print(result)

@@ -14,6 +14,9 @@ INTERPRETER = ROOT / "bin" / "interpter_inC"
 WORKLOADS = (
     ("loop (1,000,000 iterations)", ROOT / "tests" / "performance.lang", 1_000_000),
     ("function calls (10,000 calls)", ROOT / "tests" / "benchmark_functions.lang", 10_000),
+    ("factorial_recursive (10)", ROOT / "tests" / "recursion.lang", 3628800),
+    ("fibonacci_recursive (30)", ROOT / "tests" / "fibonacci.lang", 832040),
+    ("variable_benchmark (10,000 iterations)", ROOT / "tests" / "variables_benchmark.lang", 150,10_000),
 )
 
 
