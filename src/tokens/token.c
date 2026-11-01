@@ -64,17 +64,7 @@ Token *peek(Token *token){
 
 //moves from token to the next in one direction from head to tail
 Token *advance(Token *token){
-    if(token->next==NULL || token ==NULL){
-        
-
-        return NULL;
-        
-
-    }
-    else{
-        return token->next;
-    }
-
+    return token == NULL ? NULL : token->next;
 }
 void free_tokens(Token *token) {
     while (token != NULL) {
@@ -83,4 +73,3 @@ void free_tokens(Token *token) {
         token = next;
     }
 }
-

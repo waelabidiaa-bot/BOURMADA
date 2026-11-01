@@ -7,9 +7,8 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-astnode *parse_factor(Token **current);
-astnode *parse_term(Token **current);
 astnode *parse_expression(Token **current);
+astnode *parse_program(Token **current);
 
 
 #endif

@@ -1,18 +1,12 @@
 #include <stdbool.h>
-#include "../parser/parser.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-
-
+#include "../ast/astnode.h"
+#include "../variables/var.h"
 
 #ifndef EVALUATOR_H
 #define EVALUATOR_H
 
- 
-
-int evaluation(astnode *node);
+variable_value evaluation(astnode *node);
+void print_value(variable_value value);
 
 
 

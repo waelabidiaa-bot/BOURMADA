@@ -12,8 +12,8 @@
 #ifndef LEX_H
 #define LEX_H
 
-#define MAX_LENGTH 100
-#define MAX_TOKENS 100
+#define MAX_LENGTH 4096
+#define MAX_TOKENS 512
 
 Token *lex_input(char *s);
 

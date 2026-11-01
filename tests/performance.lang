@@ -1,0 +1,12 @@
+// =================================
+// BENCHMARK 1: LOOP PERFORMANCE
+// =================================
+
+let int i = 0
+let int limit = 1000000
+
+while (i < limit) do {
+    i = i + 1
+}
+
+print(i)

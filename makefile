@@ -12,9 +12,12 @@ SRCS := $(shell find $(SRC_DIR) -name "*.c")
 OBJS := $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
-.PHONY: all clean
+.PHONY: all benchmark clean
 
 all: $(TARGET)
+
+benchmark: $(TARGET)
+	@python3 tests/benchmark.py
 
 $(TARGET): $(OBJS) | $(BIN_DIR)
 	@echo "Linking executable: $@"
@@ -33,5 +36,4 @@ clean:
 	@rm -rf $(OBJ_DIR) $(BIN_DIR)
 
 -include $(DEPS)
-
 

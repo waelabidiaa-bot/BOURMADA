@@ -1,0 +1,250 @@
+C INTERPRETER: LANGUAGE GUIDE
+============================
+
+This guide describes the syntax currently implemented by the interpreter.
+Examples are entered at the REPL prompt or saved in a .lang file and piped in:
+
+    make
+    ./bin/interpter_inC < tests/example.lang
+
+Run the performance benchmarks with `make benchmark`, or use
+`python3 tests/benchmark.py --runs 10` to choose the number of repetitions.
+Benchmarks report median and best wall-clock times after checking the workload
+results.
+
+The REPL accepts expressions and statements one line at a time. It collects
+input until a block's braces are balanced. Statements do not need semicolons;
+semicolons may be used as separators.
+
+
+COMMENTS AND LITERALS
+---------------------
+
+`//` comments out the rest of the line. It can start a line or follow code.
+The same characters inside a quoted string are text.
+
+    // A whole-line comment
+    print("path://name") // An inline comment
+
+Supported literals:
+
+    42                 // int
+    "hello"            // str
+    true               // bool
+    false              // bool
+
+Strings use double quotes and are limited to 24 characters. Escape sequences
+and multiline strings are not implemented.
+
+
+VARIABLES, TYPES, AND SCOPE
+---------------------------
+
+Declare a variable with `let`, optionally specifying a type:
+
+    let int count = 10
+    let str name = "Ada"
+    let bool ready = true
+    let next_count = count + 1
+
+The supported types are `int`, `str`, and `bool`. An inferred declaration
+takes its type from its initial value. Assignments require an existing
+variable and must preserve its type:
+
+    count = count + 1
+    ready = false
+
+Redeclaring a name in the same scope is an error. A nested block can shadow an
+outer variable:
+
+    let int value = 1
+    if (true) {
+        let int value = 2
+        print(value)       // 2
+    }
+    print(value)           // 1
+
+Variables declared inside an `if`/`else` branch or a `while` body are removed
+when that block exits. Each loop iteration gets a fresh body scope. Function
+parameters and local declarations exist only during that call. Functions can
+read globals, but cannot read variables local to their caller.
+
+Top-level variables remain available to later REPL input.
+
+
+EXPRESSIONS AND OPERATORS
+-------------------------
+
+Arithmetic operators work on integers:
+
+    +    -    *    /
+
+Multiplication and division have higher precedence than addition and
+subtraction. Parentheses group expressions. Unary minus is supported.
+Division is integer division; dividing by zero is an error. Integer overflow
+is reported as an evaluation error.
+
+Comparisons:
+
+    ==    !=    <    >    <=    >=
+
+Equality and inequality compare values of the same type; values with
+different types are unequal. Relational operators require integers and
+produce a boolean.
+
+Boolean operators:
+
+    &&    ||    !
+
+`&&` and `||` short-circuit. Logical operators accept booleans or integers;
+for an integer, zero is false and non-zero is true. `!` requires a boolean.
+There is no string concatenation or modulo operator.
+
+
+PRINT
+-----
+
+`print` takes one expression and writes its value followed by a newline:
+
+    print(2 + 3)
+    print("hello")
+    print(true)
+
+Output:
+
+    5
+    hello
+    true
+
+At the REPL, other successful expressions/declarations may also echo their
+result with a `>>>` prefix. `print(...)` writes its value without that extra
+echo. The REPL prompt is also printed when input is redirected from a file.
+
+
+CONDITIONALS
+------------
+
+Conditions must be enclosed in parentheses. `else` and `else if` are
+optional:
+
+    let int temperature = 18
+    if (temperature < 10) {
+        print("cold")
+    } else if (temperature < 20) {
+        print("mild")
+    } else {
+        print("warm")
+    }
+
+Output:
+
+    mild
+
+An `if` or `else` block has its own variable scope.
+
+
+WHILE LOOPS AND BREAK
+---------------------
+
+The `do` keyword is required between a while condition and its body.
+`break` exits the innermost loop:
+
+    let int count = 0
+    while (count < 5) do {
+        count = count + 1
+        if (count == 3) {
+            break
+        }
+    }
+    print(count)
+
+Output:
+
+    3
+
+There is no `for` loop or `continue` statement.
+
+
+FUNCTIONS, PARAMETERS, AND RETURNS
+----------------------------------
+
+Functions declare a return type (`int`, `str`, or `bool`), a name, optional
+parameters, and a block. Parameter types may be omitted or specified. Calls
+must provide the correct number of arguments; typed parameters also check the
+argument type. The function must return a value matching its declared type.
+
+    fn int add_two(int value) {
+        return value + 2
+    }
+    print(add_two(10))
+
+Output:
+
+    12
+
+Untyped parameters accept any of the supported value types:
+
+    fn str greet(person) {
+        return "hello"
+    }
+    print(greet("Ada"))
+
+Functions can call themselves recursively. Define a function before calling
+it:
+
+    fn int factorial(int n) {
+        if (n <= 1) {
+            return 1
+        }
+        return n * factorial(n - 1)
+    }
+    print(factorial(5))
+
+Output:
+
+    120
+
+There are no void functions, default arguments, named arguments, or
+prototypes/forward declarations. A function without a valid return is an
+error.
+
+
+ERRORS AND EXECUTION BEHAVIOR
+-----------------------------
+
+The interpreter reports lexer, parser, variable, type, function, scope, and
+evaluation errors. Examples include:
+
+    print(missing)                  // undefined variable
+    let int bad = "text"            // type mismatch
+    print(10 / 0)                   // division by zero
+    print(2147483647 + 1)           // overflow on a 32-bit int platform
+
+Lexer errors reject the submitted input. Parse errors prevent that input from
+executing. A runtime error stops the remaining statements in the current
+execution sequence. Errors currently do not include source line/column
+locations.
+
+
+CURRENT LIMITATIONS
+-------------------
+
+- Only `int`, `str`, and `bool` values are implemented. There are no floats,
+  arrays, objects, or user-defined types.
+- Strings are short, double-quoted literals. Escapes, multiline strings, and
+  string concatenation are not supported.
+- Arithmetic is integer-only; there is no modulo operator.
+- Control flow includes `if`/`else if`/`else`, `while`, and `break`; there are
+  no `for` loops or `continue`.
+- Function definitions must appear before their calls. Parameters can be
+  optionally typed, but variables do not have standalone declarations without
+  an initializer.
+- There is no static type checking: most type errors are found while evaluating
+  the statement, not before the program starts.
+- There is no source location in diagnostics, no file/module import system,
+  and no dedicated unit/regression test runner yet. A separate benchmark
+  runner measures execution time and checks its sample results.
+- Implementation limits include 24-character names and strings, 512 tokens per
+  submitted input, 200 variables, 64 functions, 64 function arguments per
+  call, 128 nested scopes, a 4096-byte REPL line buffer, and a 16384-byte
+  accumulated program buffer.
