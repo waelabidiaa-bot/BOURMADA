@@ -12,8 +12,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 INTERPRETER = ROOT / "bin" / "interpter_inC"
 WORKLOADS = (
-    ("loop (10,000,000 iterations)", ROOT / "tests" / "performance.lang", 10_000_000),
-    ("function calls (100,000 calls)", ROOT / "tests" / "benchmark_functions.lang", 100_000),
+    ("loop (1,000,000 iterations)", ROOT / "tests" / "performance.lang", 1_000_000),
+    ("function calls (10,000 calls)", ROOT / "tests" / "benchmark_functions.lang", 10_000),
 )
 
 

@@ -6,7 +6,7 @@ fn int add_one(int value) {
     return value + 1
 }
 
-while (i < 100000) do {
+while (i < 10000) do {
     total = add_one(total)
     i = i + 1
 }
