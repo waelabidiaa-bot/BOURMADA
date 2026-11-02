@@ -1,0 +1,6 @@
+Bourmada: bin/bourmada
+Benchmark: factorial_recursive (10)
+Runs: 5
+Times include process startup, lexing, parsing, and evaluation.
+
+factorial_recursive (10): median 0.001029s, best 0.000723s, 9,714 workload iterations/s

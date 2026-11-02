@@ -1,0 +1,6 @@
+Bourmada: bin/bourmada
+Benchmark: for loop (10,000,000 iterations)
+Runs: 5
+Times include process startup, lexing, parsing, and evaluation.
+
+for loop (10,000,000 iterations): median 4.261239s, best 3.967515s, 234,674 workload iterations/s

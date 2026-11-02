@@ -166,7 +166,81 @@ Output:
 
     3
 
-There is no `for` loop or `continue` statement.
+
+
+FOR LOOPS
+---------
+
+The `do` keyword separates the loop header from its body. A condition-only
+loop works like `while`:
+
+    for (count < 5) do {
+        print(count)
+        count = count + 1
+    }
+
+An integer counter can be declared in the header. It starts at zero and is
+automatically increased by one after each iteration:
+
+    let int length = 10
+    for (int i; i < length) do {
+        print(i)
+    }
+
+The counter is local to the loop. You can also give it a starting value:
+
+    for (let int i = 3; i < 6) do {
+        print(i)
+    }
+
+`break` exits the innermost `for` or `while` loop.
+
+
+
+TABLES
+------
+
+declaration:
+table users {
+    int id
+    str name
+    int age
+}
+
+insertion:
+insert users {
+    id: 1,
+    name: "Wael",
+    age: 23
+}
+
+insert users {
+    id: 2,
+    name: "Ahmed",
+    age: 25
+}
+
+delete:
+
+delete users[1]
+
+update:
+
+update users[0] {
+    age: 24
+}
+
+reading values:
+
+
+print(users[0].name)
+print(users[1].age)
+
+Rows use zero-based indexes. Inserts must provide every schema column exactly
+once, in any order. Updates may change one or more columns; provided values
+must match the declared column types. Deleting a row shifts later rows down.
+Tables support up to 32 columns and 256 rows each.
+
 
 
 FUNCTIONS, PARAMETERS, AND RETURNS
@@ -238,8 +312,8 @@ CURRENT LIMITATIONS
 - Strings are short, double-quoted literals. Escapes, multiline strings, and
   string concatenation are not supported.
 - Arithmetic is integer-only; there is no modulo operator.
-- Control flow includes `if`/`else if`/`else`, `while`, and `break`; there are
-  no `for` loops or `continue`.
+- Control flow includes `if`/`else if`/`else`, `while`, `for`, and `break`;
+  there is no `continue`.
 - Function definitions must appear before their calls. Parameters can be
   optionally typed, but variables do not have standalone declarations without
   an initializer.
@@ -249,6 +323,6 @@ CURRENT LIMITATIONS
   and no dedicated unit/regression test runner yet. A separate benchmark
   runner measures execution time and checks its sample results.
 - Implementation limits include 24-character names and strings, 512 tokens per
-  submitted input, 200 variables, 64 functions, 64 function arguments per
-  call, 128 nested scopes, a 4096-byte REPL line buffer, and a 16384-byte
-  accumulated program buffer.
+  submitted input, 200 variables, 32 tables, 32 columns and 256 rows per table,
+  64 functions, 64 function arguments per call, 128 nested scopes, a 4096-byte
+  REPL line buffer, and a 16384-byte accumulated program buffer.

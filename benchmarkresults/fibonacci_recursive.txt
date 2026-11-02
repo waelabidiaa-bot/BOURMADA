@@ -1,0 +1,6 @@
+Bourmada: bin/bourmada
+Benchmark: fibonacci_recursive (30)
+Runs: 5
+Times include process startup, lexing, parsing, and evaluation.
+
+fibonacci_recursive (30): median 2.021450s, best 1.970123s, 15 workload iterations/s

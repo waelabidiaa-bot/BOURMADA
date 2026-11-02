@@ -24,12 +24,13 @@ bool is_math_symbole( char c){
 
 
 
-Token *lex_input(char *s) {
+Token *lex_input(char *s, int starting_line) {
     Token *head = NULL;
     Token *tail = NULL;
 
     int i = 0;
     int token_count = 0;
+    int line = starting_line;
 
     while (s[i] != '\0') {
 
@@ -41,16 +42,23 @@ Token *lex_input(char *s) {
         }
 
         if (isspace((unsigned char)s[i])) {
+            if (s[i] == '\n') {
+                line++;
+            }
             i++;
             continue;
         }
 
+        int token_line = line;
         char value[MAX_LENGTH];
         int j = 0;
 
         if (s[i] == '"') {
             i++;
             while (s[i] != '\0' && s[i] != '"') {
+                if (s[i] == '\n') {
+                    line++;
+                }
                 if (j >= (int)sizeof(((Token *)0)->value) - 1) {
                     printf("lexer error: string literal is too long\n");
                     free_tokens(head);
@@ -66,7 +74,7 @@ Token *lex_input(char *s) {
             value[j] = '\0';
             i++;
 
-            if (!add_token(&head, &tail, value, "string", token_count++)) {
+            if (!add_token(&head, &tail, value, "string", token_count++, token_line)) {
                 printf("error: tokenisation failed\n");
                 free_tokens(head);
                 return NULL;
@@ -87,7 +95,7 @@ Token *lex_input(char *s) {
 
             value[j] = '\0';
 
-            if (!add_token(&head, &tail, value, "number", token_count++)) {
+            if (!add_token(&head, &tail, value, "number", token_count++, token_line)) {
                 printf("error: tokenisation failed\n");
                 free_tokens(head);
                 return NULL;
@@ -108,7 +116,7 @@ Token *lex_input(char *s) {
 
             value[j] = '\0';
 
-            if (!add_token(&head, &tail, value, "identifier", token_count++)) {
+            if (!add_token(&head, &tail, value, "identifier", token_count++, token_line)) {
                 printf("error: tokenisation failed\n");
                 free_tokens(head);
                 return NULL;
@@ -132,7 +140,7 @@ Token *lex_input(char *s) {
             }
             i++;
 
-            if (!add_token(&head, &tail, value, "operator", token_count++)) {
+            if (!add_token(&head, &tail, value, "operator", token_count++, token_line)) {
                 printf("error: tokenisation failed\n");
                 free_tokens(head);
                 return NULL;
@@ -146,7 +154,7 @@ Token *lex_input(char *s) {
             value[1] = '\0';
             i++;
 
-            if (!add_token(&head, &tail, value, "punct", token_count++)) {
+            if (!add_token(&head, &tail, value, "punct", token_count++, token_line)) {
                 printf("error: tokenisation failed\n");
                 free_tokens(head);
                 return NULL;

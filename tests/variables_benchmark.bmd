@@ -3,12 +3,28 @@ let int b = 20
 let int c = 30
 let int d = 40
 let int e = 50
+let int f = 60
+let int g = 70
+let int h = 80
+let int j = 90
+let int k = 100
+let int a1 = 10
+let int b1 = 20
+let int c1 = 30
+let int d1 = 40
+let int e1 = 50
+let int f1 = 60
+let int g1 = 70
+let int h1 = 80
+let int j1 = 90
+let int k1 = 100
+
 
 let int i = 0
 let int result = 0
 
 while (i < 1000000) do {
-    result = a + b + c + d + e
+    result = a + b + c + d + e + f + g + h + j + k
     i = i + 1
 }
 

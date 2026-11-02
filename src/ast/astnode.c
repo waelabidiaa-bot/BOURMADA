@@ -16,6 +16,7 @@ astnode *create_node(const char *type,const char *value){
 
     snprintf(node->type,sizeof(node->type),"%s",type);
     snprintf(node->value,sizeof(node->value),"%s",value);
+    node->line = 0;
 
     node->left= NULL;
     node->right=NULL;
@@ -42,4 +43,3 @@ void print_ast(astnode *node) {
     print_ast(node->left);
     print_ast(node->right);
 }
-

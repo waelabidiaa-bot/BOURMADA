@@ -1,0 +1,5 @@
+let int completed = 0
+for (int i; i < 10000000) do {
+    completed = i + 1
+}
+print(completed)

@@ -7,6 +7,7 @@
 
 typedef struct Token {
     int number;
+    int line;
     char type[20];
     char value[25];
     struct Token* next; 
@@ -15,7 +16,8 @@ typedef struct Token {
 
 
 
-bool add_token(Token **head,Token **tail,const char *value,const char *type,int number);
+bool add_token(Token **head,Token **tail,const char *value,const char *type,
+               int number, int line);
 bool match(Token **token,const char *expected_value);
 Token *peek(Token *token);
 Token *advance(Token *token);

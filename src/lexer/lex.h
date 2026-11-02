@@ -15,7 +15,7 @@
 #define MAX_LENGTH 4096
 #define MAX_TOKENS 512
 
-Token *lex_input(char *s);
+Token *lex_input(char *s, int starting_line);
 
 
 

@@ -1,0 +1,31 @@
+table users {
+    int id
+    str name
+    int age
+    bool active
+}
+
+insert users {
+    id: 1,
+    name: "Wael",
+    age: 23,
+    active: true
+}
+
+insert users {
+    active: false,
+    age: 25,
+    name: "Ahmed",
+    id: 2
+}
+
+print(users[0].name)
+print(users[1].age)
+
+update users[0] {
+    age: 24
+}
+print(users[0].age)
+
+delete users[1]
+print(users[0].active)

@@ -12,7 +12,8 @@
 
 
 
-bool add_token(Token **head,Token **tail,const char *value,const char *type,int number){
+bool add_token(Token **head,Token **tail,const char *value,const char *type,
+               int number, int line){
     Token *new_token = malloc(sizeof(Token));
 
     if(new_token==NULL){
@@ -23,6 +24,7 @@ bool add_token(Token **head,Token **tail,const char *value,const char *type,int 
     snprintf(new_token->type,sizeof(new_token->type),"%s",type);
 
     new_token->number = number;
+    new_token->line = line;
     new_token->next = NULL;
     if(*head == NULL){
         *head = new_token;

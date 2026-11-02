@@ -13,8 +13,11 @@
 #include "parser/parser.h"
 #include "evaluator/evaluator.h"
 #include "lexer/lex.h"
+#include "../tables/table.h"
 
 #define MAX_SOURCE_LENGTH 16384
+
+static int input_line_number;
 
 static int brace_depth(const char *source) {
     int depth = 0;
@@ -67,6 +70,7 @@ static int read_input_line(FILE *input, char *line, size_t capacity) {
     if (fgets(line, (int)capacity, input) == NULL) {
         return -1;
     }
+    input_line_number++;
 
     if (strchr(line, '\n') == NULL && !feof(input)) {
         int character;
@@ -100,8 +104,8 @@ static bool should_echo_result(astnode *program) {
            strcmp(type, "break") != 0;
 }
 
-static void execute_source(char *source) {
-    Token *tokens = lex_input(source);
+static void execute_source(char *source, int starting_line) {
+    Token *tokens = lex_input(source, starting_line);
     if (tokens == NULL) {
         return;
     }
@@ -152,6 +156,8 @@ int main(int argc, char *argv[]) {
     char line[MAX_LENGTH];
     char pending_line[MAX_LENGTH];
     char source[MAX_SOURCE_LENGTH] = "";
+    int source_starting_line = 1;
+    int pending_line_number = 0;
 
     bool has_pending_line = false;
 
@@ -160,16 +166,19 @@ int main(int argc, char *argv[]) {
     }
 
     for (;;) {
+        int current_line_number;
 
         if (interactive) printf("~");
 
         if (has_pending_line) {
             snprintf(line, sizeof(line), "%s", pending_line);
+            current_line_number = pending_line_number;
             has_pending_line = false;
         } else {
             int read_status = read_input_line(input, line, sizeof(line));
 
             if (read_status < 0) break;
+            current_line_number = input_line_number;
 
             if (read_status == 0) {
                 source[0] = '\0';
@@ -177,6 +186,9 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        if (source[0] == '\0') {
+            source_starting_line = current_line_number;
+        }
         if (!append_line(source, sizeof(source), line)) {
             continue;
         }
@@ -240,6 +252,7 @@ int main(int argc, char *argv[]) {
 
                 if (!begins_with_keyword(line, "else")) {
                     snprintf(pending_line, sizeof(pending_line), "%s", line);
+                    pending_line_number = input_line_number;
                     has_pending_line = true;
                     break;
                 }
@@ -294,17 +307,19 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        execute_source(source);
+        execute_source(source, source_starting_line);
         source[0] = '\0';
     }
 
     if (source[0] != '\0') {
-        execute_source(source);
+        execute_source(source, source_starting_line);
     }
 
     if (input != stdin) {
         fclose(input);
     }
 
+    evaluator_cleanup();
+    table_cleanup();
     return 0;
 }

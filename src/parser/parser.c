@@ -8,6 +8,13 @@ static bool is_value(Token *token, const char *value) {
     return token != NULL && strcmp(token->value, value) == 0;
 }
 
+static bool is_type_name(Token *token) {
+    return token != NULL &&
+           (strcmp(token->value, "int") == 0 ||
+            strcmp(token->value, "str") == 0 ||
+            strcmp(token->value, "bool") == 0);
+}
+
 static astnode *parse_statement(Token **current);
 static astnode *parse_expression_internal(Token **current);
 
@@ -17,6 +24,133 @@ static astnode *new_node(const char *type, const char *value) {
         printf("parser error: out of memory\n");
     }
     return node;
+}
+
+static astnode *parse_table_fields(Token **current) {
+    if (!is_value(*current, "{")) {
+        printf("parser error: expected '{' before table fields\n");
+        return NULL;
+    }
+    *current = advance(*current);
+
+    astnode *head = NULL;
+    astnode *tail = NULL;
+    while (*current != NULL && !is_value(*current, "}")) {
+        if (strcmp((*current)->type, "identifier") != 0) {
+            printf("parser error: expected a table field name\n");
+            free_ast(head);
+            return NULL;
+        }
+        int line = (*current)->line;
+        char field_name[25];
+        snprintf(field_name, sizeof(field_name), "%s", (*current)->value);
+        *current = advance(*current);
+        if (!is_value(*current, ":")) {
+            printf("parser error: expected ':' after table field name\n");
+            free_ast(head);
+            return NULL;
+        }
+        *current = advance(*current);
+        astnode *value = parse_expression_internal(current);
+        astnode *field = new_node("table_field", field_name);
+        if (value == NULL || field == NULL) {
+            free_ast(value);
+            free_ast(field);
+            free_ast(head);
+            return NULL;
+        }
+        field->line = line;
+        field->left = value;
+        if (tail == NULL) {
+            head = field;
+        } else {
+            tail->right = field;
+        }
+        tail = field;
+
+        if (is_value(*current, ",")) {
+            *current = advance(*current);
+        } else if (!is_value(*current, "}")) {
+            printf("parser error: expected ',' or '}' after table field\n");
+            free_ast(head);
+            return NULL;
+        }
+    }
+    if (!is_value(*current, "}")) {
+        printf("parser error: expected '}' after table fields\n");
+        free_ast(head);
+        return NULL;
+    }
+    *current = advance(*current);
+    if (head == NULL) {
+        printf("parser error: a table row needs at least one field\n");
+        return NULL;
+    }
+    return head;
+}
+
+static astnode *parse_table_declaration(Token **current) {
+    int line = (*current)->line;
+    *current = advance(*current);
+    if (*current == NULL || strcmp((*current)->type, "identifier") != 0) {
+        printf("parser error: expected table name after 'table'\n");
+        return NULL;
+    }
+    char name[25];
+    snprintf(name, sizeof(name), "%s", (*current)->value);
+    *current = advance(*current);
+    if (!is_value(*current, "{")) {
+        printf("parser error: expected '{' after table name\n");
+        return NULL;
+    }
+    *current = advance(*current);
+
+    astnode *table = new_node("table_declaration", name);
+    astnode *tail = NULL;
+    if (table == NULL) {
+        return NULL;
+    }
+    table->line = line;
+    while (*current != NULL && !is_value(*current, "}")) {
+        if (!is_type_name(*current)) {
+            printf("parser error: expected int, str, or bool in table schema\n");
+            free_ast(table);
+            return NULL;
+        }
+        char field_type[25];
+        snprintf(field_type, sizeof(field_type), "%s", (*current)->value);
+        *current = advance(*current);
+        if (*current == NULL || strcmp((*current)->type, "identifier") != 0) {
+            printf("parser error: expected column name after its type\n");
+            free_ast(table);
+            return NULL;
+        }
+        astnode *column = new_node(field_type, (*current)->value);
+        if (column == NULL) {
+            free_ast(table);
+            return NULL;
+        }
+        column->line = (*current)->line;
+        *current = advance(*current);
+        if (tail == NULL) {
+            table->left = column;
+        } else {
+            tail->right = column;
+        }
+        tail = column;
+    }
+    if (!is_value(*current, "}")) {
+        printf("parser error: expected '}' after table schema\n");
+        free_ast(table);
+        return NULL;
+    }
+    *current = advance(*current);
+    if (table->left == NULL) {
+        printf("parser error: a table schema needs at least one column\n");
+        free_ast(table);
+        return NULL;
+    }
+    return table;
 }
 
 static astnode *parse_block(Token **current) {
@@ -116,8 +250,45 @@ static astnode *parse_primary(Token **current) {
 
     if (strcmp((*current)->type, "identifier") == 0) {
         char name[25];
+        int source_line = (*current)->line;
         snprintf(name, sizeof(name), "%s", (*current)->value);
         *current = advance(*current);
+
+        if (is_value(*current, "[")) {
+            *current = advance(*current);
+            astnode *row_index = parse_expression_internal(current);
+            if (row_index == NULL || !is_value(*current, "]")) {
+                printf("parser error: expected ']' after table row index\n");
+                free_ast(row_index);
+                return NULL;
+            }
+            *current = advance(*current);
+            if (!is_value(*current, ".")) {
+                printf("parser error: expected '.' and a column name after table row\n");
+                free_ast(row_index);
+                return NULL;
+            }
+            *current = advance(*current);
+            if (*current == NULL || strcmp((*current)->type, "identifier") != 0) {
+                printf("parser error: expected table column name after '.'\n");
+                free_ast(row_index);
+                return NULL;
+            }
+            astnode *column = new_node("table_column_ref", (*current)->value);
+            astnode *access = new_node("table_access", name);
+            if (column == NULL || access == NULL) {
+                free_ast(row_index);
+                free_ast(column);
+                free_ast(access);
+                return NULL;
+            }
+            column->line = (*current)->line;
+            access->line = source_line;
+            access->left = row_index;
+            access->right = column;
+            *current = advance(*current);
+            return access;
+        }
 
         if (is_value(*current, "(")) {
             *current = advance(*current);
@@ -125,6 +296,7 @@ static astnode *parse_primary(Token **current) {
             if (call == NULL) {
                 return NULL;
             }
+            call->line = source_line;
             astnode *tail = NULL;
             while (*current != NULL && !is_value(*current, ")")) {
                 astnode *argument = parse_expression_internal(current);
@@ -168,6 +340,12 @@ static astnode *parse_primary(Token **current) {
             *current = advance(*current);
             astnode *assignment = new_node("assign", "=");
             astnode *variable = new_node("var", name);
+            if (assignment != NULL) {
+                assignment->line = source_line;
+            }
+            if (variable != NULL) {
+                variable->line = source_line;
+            }
             astnode *value = parse_expression_internal(current);
             if (assignment == NULL || variable == NULL || value == NULL) {
                 free_ast(assignment);
@@ -179,7 +357,11 @@ static astnode *parse_primary(Token **current) {
             assignment->right = value;
             return assignment;
         }
-        return new_node("identifier", name);
+        astnode *identifier = new_node("identifier", name);
+        if (identifier != NULL) {
+            identifier->line = source_line;
+        }
+        return identifier;
     }
 
     printf("parser error: unexpected token '%s'\n", (*current)->value);
@@ -331,6 +513,111 @@ static astnode *parse_condition_block(Token **current, const char *kind) {
     return node;
 }
 
+static astnode *parse_for_statement(Token **current) {
+    int source_line = (*current)->line;
+    *current = advance(*current);
+    if (!is_value(*current, "(")) {
+        printf("parser error: expected '(' after 'for'\n");
+        return NULL;
+    }
+    *current = advance(*current);
+
+    astnode *initializer = NULL;
+    char counter_name[25] = "";
+    if (is_value(*current, "int") || is_value(*current, "let")) {
+        if (is_value(*current, "let")) {
+            *current = advance(*current);
+        }
+        if (!is_value(*current, "int")) {
+            printf("parser error: for-loop counters must have type 'int'\n");
+            return NULL;
+        }
+        *current = advance(*current);
+        if (*current == NULL || strcmp((*current)->type, "identifier") != 0) {
+            printf("parser error: expected counter name in for-loop header\n");
+            return NULL;
+        }
+
+        int counter_line = (*current)->line;
+        snprintf(counter_name, sizeof(counter_name), "%s", (*current)->value);
+        astnode *declaration = new_node("let", "int");
+        astnode *variable = new_node("var", counter_name);
+        if (variable != NULL) {
+            variable->line = counter_line;
+        }
+        *current = advance(*current);
+
+        astnode *initial_value;
+        if (is_value(*current, "=")) {
+            *current = advance(*current);
+            initial_value = parse_expression_internal(current);
+        } else {
+            initial_value = new_node("number", "0");
+            if (initial_value != NULL) {
+                initial_value->line = counter_line;
+            }
+        }
+        if (declaration == NULL || variable == NULL || initial_value == NULL) {
+            free_ast(declaration);
+            free_ast(variable);
+            free_ast(initial_value);
+            return NULL;
+        }
+        declaration->line = counter_line;
+        declaration->left = variable;
+        declaration->right = initial_value;
+        initializer = declaration;
+
+        if (!is_value(*current, ";")) {
+            printf("parser error: expected ';' after for-loop counter\n");
+            free_ast(initializer);
+            return NULL;
+        }
+        *current = advance(*current);
+    }
+
+    astnode *condition = parse_expression_internal(current);
+    if (condition == NULL || !is_value(*current, ")")) {
+        printf("parser error: expected ')' after for-loop condition\n");
+        free_ast(initializer);
+        free_ast(condition);
+        return NULL;
+    }
+    *current = advance(*current);
+    if (!is_value(*current, "do")) {
+        printf("parser error: expected 'do' after for-loop header\n");
+        free_ast(initializer);
+        free_ast(condition);
+        return NULL;
+    }
+    *current = advance(*current);
+
+    astnode *body = parse_block(current);
+    if (body == NULL) {
+        free_ast(initializer);
+        free_ast(condition);
+        return NULL;
+    }
+
+    astnode *header = new_node("for_header", counter_name);
+    astnode *loop = new_node("for", "for");
+    if (header == NULL || loop == NULL) {
+        free_ast(initializer);
+        free_ast(condition);
+        free_ast(body);
+        free_ast(header);
+        free_ast(loop);
+        return NULL;
+    }
+    header->line = source_line;
+    header->left = initializer;
+    header->right = condition;
+    loop->line = source_line;
+    loop->left = header;
+    loop->right = body;
+    return loop;
+}
+
 static astnode *parse_if_statement(Token **current) {
     astnode *node = parse_condition_block(current, "if");
     if (node == NULL || !is_value(*current, "else")) {
@@ -362,7 +649,96 @@ static astnode *parse_if_statement(Token **current) {
 }
 
 static astnode *parse_statement(Token **current) {
+    if (is_value(*current, "table")) {
+        return parse_table_declaration(current);
+    }
+
+    if (is_value(*current, "insert")) {
+        int line = (*current)->line;
+        *current = advance(*current);
+        if (*current == NULL || strcmp((*current)->type, "identifier") != 0) {
+            printf("parser error: expected table name after 'insert'\n");
+            return NULL;
+        }
+        astnode *insert = new_node("table_insert", (*current)->value);
+        if (insert == NULL) {
+            return NULL;
+        }
+        insert->line = line;
+        *current = advance(*current);
+        insert->left = parse_table_fields(current);
+        if (insert->left == NULL) {
+            free_ast(insert);
+            return NULL;
+        }
+        return insert;
+    }
+
+    if (is_value(*current, "delete")) {
+        int line = (*current)->line;
+        *current = advance(*current);
+        if (*current == NULL || strcmp((*current)->type, "identifier") != 0) {
+            printf("parser error: expected table name after 'delete'\n");
+            return NULL;
+        }
+        astnode *remove = new_node("table_delete", (*current)->value);
+        if (remove == NULL) {
+            return NULL;
+        }
+        remove->line = line;
+        *current = advance(*current);
+        if (!is_value(*current, "[")) {
+            printf("parser error: expected '[' before deleted row index\n");
+            free_ast(remove);
+            return NULL;
+        }
+        *current = advance(*current);
+        remove->left = parse_expression_internal(current);
+        if (remove->left == NULL || !is_value(*current, "]")) {
+            printf("parser error: expected ']' after deleted row index\n");
+            free_ast(remove);
+            return NULL;
+        }
+        *current = advance(*current);
+        return remove;
+    }
+
+    if (is_value(*current, "update")) {
+        int line = (*current)->line;
+        *current = advance(*current);
+        if (*current == NULL || strcmp((*current)->type, "identifier") != 0) {
+            printf("parser error: expected table name after 'update'\n");
+            return NULL;
+        }
+        astnode *update = new_node("table_update", (*current)->value);
+        if (update == NULL) {
+            return NULL;
+        }
+        update->line = line;
+        *current = advance(*current);
+        if (!is_value(*current, "[")) {
+            printf("parser error: expected '[' before updated row index\n");
+            free_ast(update);
+            return NULL;
+        }
+        *current = advance(*current);
+        update->left = parse_expression_internal(current);
+        if (update->left == NULL || !is_value(*current, "]")) {
+            printf("parser error: expected ']' after updated row index\n");
+            free_ast(update);
+            return NULL;
+        }
+        *current = advance(*current);
+        update->right = parse_table_fields(current);
+        if (update->right == NULL) {
+            free_ast(update);
+            return NULL;
+        }
+        return update;
+    }
+
     if (is_value(*current, "let")) {
+        int declaration_line = (*current)->line;
         *current = advance(*current);
         const char *declared_type = "infer";
         if (*current != NULL && (strcmp((*current)->value, "int") == 0 ||
@@ -377,6 +753,12 @@ static astnode *parse_statement(Token **current) {
         }
         astnode *declaration = new_node("let", declared_type);
         astnode *variable = new_node("var", (*current)->value);
+        if (declaration != NULL) {
+            declaration->line = declaration_line;
+        }
+        if (variable != NULL) {
+            variable->line = (*current)->line;
+        }
         *current = advance(*current);
         if (!is_value(*current, "=")) {
             printf("parser error: expected '=' in declaration\n");
@@ -421,13 +803,27 @@ static astnode *parse_statement(Token **current) {
     }
 
     if (is_value(*current, "if")) {
+        int source_line = (*current)->line;
         *current = advance(*current);
-        return parse_if_statement(current);
+        astnode *node = parse_if_statement(current);
+        if (node != NULL) {
+            node->line = source_line;
+        }
+        return node;
     }
 
     if (is_value(*current, "while")) {
+        int source_line = (*current)->line;
         *current = advance(*current);
-        return parse_condition_block(current, "while");
+        astnode *node = parse_condition_block(current, "while");
+        if (node != NULL) {
+            node->line = source_line;
+        }
+        return node;
+    }
+
+    if (is_value(*current, "for")) {
+        return parse_for_statement(current);
     }
 
     if (is_value(*current, "fn")) {
@@ -481,6 +877,7 @@ static astnode *parse_statement(Token **current) {
             astnode *param = new_node("parameter", (*current)->value);
             if (param != NULL) {
                 memcpy(param->type, parameter_type, strlen(parameter_type) + 1);
+                param->line = (*current)->line;
             }
             *current = advance(*current);
             if (param == NULL) {

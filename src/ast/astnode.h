@@ -13,6 +13,7 @@
 typedef struct astnode{
     char type[20];
     char value[25];
+    int line;
 
     struct astnode *left;
     struct astnode *right;

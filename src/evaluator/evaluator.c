@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../../tables/table.h"
+
 #define MAX_FUNCTIONS 64
 
 typedef struct {
@@ -15,6 +17,15 @@ typedef struct {
 
 static function_entry functions[MAX_FUNCTIONS];
 static int function_count;
+
+void evaluator_cleanup(void) {
+    for (int i = 0; i < function_count; i++) {
+        free_ast(functions[i].definition);
+        functions[i].definition = NULL;
+        functions[i].name[0] = '\0';
+    }
+    function_count = 0;
+}
 
 static variable_value invalid_value(void) {
     variable_value value = {0};
@@ -51,6 +62,38 @@ static variable_value string_value(const char *string) {
     return value;
 }
 
+static int evaluate_table_fields(astnode *fields, const char **names,
+                                 variable_value *values) {
+    int count = 0;
+    for (astnode *field = fields; field != NULL; field = field->right) {
+        if (count >= MAX_TABLE_COLUMNS) {
+            printf("table error: a row cannot contain more than %d fields\n",
+                   MAX_TABLE_COLUMNS);
+            return -1;
+        }
+        names[count] = field->value;
+        values[count] = evaluation(field->left);
+        if (!values[count].valid) {
+            return -1;
+        }
+        count++;
+    }
+    return count;
+}
+
+static bool evaluate_table_index(astnode *index_node, int source_line, int *index) {
+    variable_value value = evaluation(index_node);
+    if (!value.valid) {
+        return false;
+    }
+    if (strcmp(value.type, "int") != 0) {
+        printf("table error: row indexes must be integers (line %d)\n", source_line);
+        return false;
+    }
+    *index = value.integer;
+    return true;
+}
+
 static variable_value checked_integer(long long integer) {
     if (integer < INT_MIN || integer > INT_MAX) {
         printf("evaluation error: integer arithmetic overflow\n");
@@ -67,6 +110,7 @@ static astnode *copy_ast(const astnode *node) {
     if (copy == NULL) {
         return NULL;
     }
+    copy->line = node->line;
     copy->left = copy_ast(node->left);
     copy->right = copy_ast(node->right);
     if ((node->left != NULL && copy->left == NULL) ||
@@ -93,8 +137,8 @@ static bool truth_value(variable_value value, bool *truth) {
     return false;
 }
 
-static variable_value evaluate_scoped(astnode *body) {
-    if (!enter_scope()) {
+static variable_value evaluate_scoped(astnode *body, int source_line) {
+    if (!enter_scope(source_line)) {
         return failure_value();
     }
     variable_value result = evaluation(body);
@@ -145,7 +189,7 @@ static variable_value evaluate_call(astnode *node) {
         return failure_value();
     }
 
-    if (!enter_function_scope()) {
+    if (!enter_function_scope(node->line)) {
         return failure_value();
     }
     parameter = metadata->left;
@@ -157,7 +201,7 @@ static variable_value evaluate_call(astnode *node) {
             leave_scope();
             return failure_value();
         }
-        if (!declare_var(parameter->value, arguments[i])) {
+        if (!declare_var(parameter->value, arguments[i], parameter->line)) {
             leave_scope();
             return failure_value();
         }
@@ -199,13 +243,71 @@ variable_value evaluation(astnode *node) {
     if (strcmp(node->type, "string") == 0) {
         return string_value(node->value);
     }
+    if (strcmp(node->type, "table_declaration") == 0) {
+        const char *column_names[MAX_TABLE_COLUMNS];
+        const char *column_types[MAX_TABLE_COLUMNS];
+        int count = 0;
+        for (astnode *column = node->left; column != NULL; column = column->right) {
+            if (count >= MAX_TABLE_COLUMNS) {
+                printf("table error: a table cannot have more than %d columns (line %d)\n",
+                       MAX_TABLE_COLUMNS, node->line);
+                return failure_value();
+            }
+            column_names[count] = column->value;
+            column_types[count] = column->type;
+            count++;
+        }
+        return table_create(node->value, column_names, column_types, count, node->line)
+                   ? invalid_value() : failure_value();
+    }
+    if (strcmp(node->type, "table_insert") == 0) {
+        const char *field_names[MAX_TABLE_COLUMNS];
+        variable_value values[MAX_TABLE_COLUMNS];
+        int count = evaluate_table_fields(node->left, field_names, values);
+        if (count < 0) {
+            return failure_value();
+        }
+        return table_insert(node->value, field_names, values, count, node->line)
+                   ? invalid_value() : failure_value();
+    }
+    if (strcmp(node->type, "table_delete") == 0) {
+        int index;
+        if (!evaluate_table_index(node->left, node->line, &index)) {
+            return failure_value();
+        }
+        return table_delete(node->value, index, node->line)
+                   ? invalid_value() : failure_value();
+    }
+    if (strcmp(node->type, "table_update") == 0) {
+        int index;
+        if (!evaluate_table_index(node->left, node->line, &index)) {
+            return failure_value();
+        }
+        const char *field_names[MAX_TABLE_COLUMNS];
+        variable_value values[MAX_TABLE_COLUMNS];
+        int count = evaluate_table_fields(node->right, field_names, values);
+        if (count < 0) {
+            return failure_value();
+        }
+        return table_update(node->value, index, field_names, values, count, node->line)
+                   ? invalid_value() : failure_value();
+    }
+    if (strcmp(node->type, "table_access") == 0) {
+        int index;
+        if (!evaluate_table_index(node->left, node->line, &index)) {
+            return failure_value();
+        }
+        variable_value value;
+        return table_get(node->value, index, node->right->value,
+                         &value, node->line) ? value : failure_value();
+    }
     if (strcmp(node->type, "boolean") == 0) {
         return boolean_value(strcmp(node->value, "true") == 0);
     }
     if (strcmp(node->type, "identifier") == 0 ||
         strcmp(node->type, "var") == 0) {
         variable_value value;
-        return get_var(node->value, &value) ? value : failure_value();
+        return get_var(node->value, &value, node->line) ? value : failure_value();
     }
     if (strcmp(node->type, "let") == 0) {
         variable_value value = evaluation(node->right);
@@ -218,11 +320,12 @@ variable_value evaluation(astnode *node) {
                    node->value, node->left->value, value.type);
             return failure_value();
         }
-        return declare_var(node->left->value, value) ? value : failure_value();
+        return declare_var(node->left->value, value, node->line)
+                   ? value : failure_value();
     }
     if (strcmp(node->type, "assign") == 0) {
         variable_value value = evaluation(node->right);
-        if (!value.valid || !set_var(node->left->value, value)) {
+        if (!value.valid || !set_var(node->left->value, value, node->line)) {
             return value.failed ? value : failure_value();
         }
         return value;
@@ -297,7 +400,8 @@ variable_value evaluation(astnode *node) {
             else_body = then_body->right;
             then_body = then_body->left;
         }
-        return truth ? evaluate_scoped(then_body) : evaluate_scoped(else_body);
+        return truth ? evaluate_scoped(then_body, node->line)
+                     : evaluate_scoped(else_body, node->line);
     }
     if (strcmp(node->type, "while") == 0) {
         variable_value result = invalid_value();
@@ -310,7 +414,7 @@ variable_value evaluation(astnode *node) {
             if (!truth) {
                 return result;
             }
-            result = evaluate_scoped(node->right);
+            result = evaluate_scoped(node->right, node->line);
             if (result.returned) {
                 return result;
             }
@@ -320,6 +424,57 @@ variable_value evaluation(astnode *node) {
             if (result.break_loop) {
                 result.break_loop = false;
                 return result;
+            }
+        }
+    }
+    if (strcmp(node->type, "for") == 0) {
+        astnode *header = node->left;
+        if (!enter_scope(node->line)) {
+            return failure_value();
+        }
+        if (header->left != NULL) {
+            variable_value initialized = evaluation(header->left);
+            if (initialized.failed || !initialized.valid) {
+                leave_scope();
+                return initialized.failed ? initialized : failure_value();
+            }
+        }
+
+        variable_value result = invalid_value();
+        for (;;) {
+            variable_value condition = evaluation(header->right);
+            bool truth;
+            if (!truth_value(condition, &truth)) {
+                leave_scope();
+                return condition.failed ? condition : failure_value();
+            }
+            if (!truth) {
+                leave_scope();
+                return result;
+            }
+
+            result = evaluate_scoped(node->right, node->line);
+            if (result.returned || result.failed) {
+                leave_scope();
+                return result;
+            }
+            if (result.break_loop) {
+                result.break_loop = false;
+                leave_scope();
+                return result;
+            }
+
+            if (header->value[0] != '\0') {
+                variable_value counter;
+                if (!get_var(header->value, &counter, header->line)) {
+                    leave_scope();
+                    return failure_value();
+                }
+                variable_value next = checked_integer((long long)counter.integer + 1);
+                if (!next.valid || !set_var(header->value, next, header->line)) {
+                    leave_scope();
+                    return failure_value();
+                }
             }
         }
     }

@@ -1,112 +1,30 @@
-// Comments start with // and continue to the end of the line.
-// =================================
-// 1. VARIABLES
-// =================================
-
-let int x = 10
-let int y = 5
-let str name = "Wael"
-let bool active = true
-
-print(x)
-print(y)
-print(name)
-print(active)
-print("a//b is text")
-
-
-// =================================
-// 2. ARITHMETIC
-// =================================
-
-print(x + y)
-print(x - y)
-print(x * y)
-print(x / y)
-print((x + y) * 2)
-print(10 / 2) // Inline comments work after expressions too.
-
-
-// =================================
-// 3. ASSIGNMENT
-// =================================
-
-x = 20
-print(x)
-
-
-// =================================
-// 4. COMPARISONS
-// =================================
-
-print(x > y)
-print(x < y)
-print(x == 20)
-print(x != y)
-
-
-// =================================
-// 5. CONDITIONALS
-// =================================
-
-if (x > y) {
-    print("x is greater")
-} else {
-    print("y is greater")
+table users{
+    str name
+    int age
+    bool active
+}
+insert users{
+    name:"Alice",
+    age:30,
+    active:true
+}
+insert users{
+    name:"Bob",
+    age:25,
+    active:false
+}
+insert users{
+    name:"Charlie",
+    age:35,
+    active:true
 }
 
-
-// =================================
-// 6. WHILE LOOP
-// =================================
-
-let int i = 0
-
-while (i < 5) do {
-    print(i)
-    i = i + 1
-}
-
-
-// =================================
-// 7. BREAK
-// =================================
-
-let int j = 0
-
-while (j < 10) do {
-    if (j == 3) {
-        break
-    }
-
-    print(j)
-    j = j + 1
-}
-
-
-// =================================
-// 8. FUNCTIONS
-// =================================
-
-fn int square(int n) {
-    return n * n
-}
-
-print(square(5))
-print(square(10))
-
-let int result = square(4)
-print(result)
-
-
-// =================================
-// 9. LOGICAL OPERATORS
-// =================================
-
-if (x > 10 && y < 10) {
-    print("Both true")
-}
-
-if (x == 20 || y == 100) {
-    print("One is true")
+for(int i;i<3) do{
+    print("name: ")
+    print(users[i].name)
+    print("age: ")
+    print(users[i].age)
+    print("active: ")
+    print(users[i].active)
+    print("--------------")
 }
