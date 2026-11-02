@@ -100,3 +100,7 @@ The [tests/](./tests/) folder contains example Bourmada programs, including
 Bourmada is a learning project. Its interpreter currently favors straightforward
 implementations to make the language-processing logic easier to understand;
 more advanced algorithms and optimizations can come later.
+
+## License
+
+Bourmada is licensed under the [MIT License](./LICENSE).
