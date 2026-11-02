@@ -1,7 +1,12 @@
+
+
+#define _POSIX_C_SOURCE 200809L
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #include "tokens/token.h"
 #include "ast/astnode.h"
@@ -58,17 +63,21 @@ static bool append_line(char *source, size_t capacity, const char *line) {
     return true;
 }
 
-static int read_input_line(char *line, size_t capacity) {
-    if (fgets(line, (int)capacity, stdin) == NULL) {
+static int read_input_line(FILE *input, char *line, size_t capacity) {
+    if (fgets(line, (int)capacity, input) == NULL) {
         return -1;
     }
-    if (strchr(line, '\n') == NULL && !feof(stdin)) {
+
+    if (strchr(line, '\n') == NULL && !feof(input)) {
         int character;
-        while ((character = getchar()) != '\n' && character != EOF) {
+
+        while ((character = fgetc(input)) != '\n' && character != EOF) {
         }
+
         printf("input error: line exceeds the maximum length\n");
         return 0;
     }
+
     return 1;
 }
 
@@ -118,23 +127,50 @@ static void execute_source(char *source) {
     free_tokens(tokens);
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
+
+    FILE *input = stdin;
+
+    // Check command-line arguments
+    if (argc > 2) {
+        printf("Usage: bourmada [filename.bmd]\n");
+        return 1;
+    }
+
+    // Open source file if provided
+    if (argc == 2) {
+        input = fopen(argv[1], "r");
+
+        if (input == NULL) {
+            perror("bourmada");
+            return 1;
+        }
+    }
+
+    bool interactive = (argc == 1 && isatty(fileno(stdin)));
+
     char line[MAX_LENGTH];
     char pending_line[MAX_LENGTH];
     char source[MAX_SOURCE_LENGTH] = "";
+
     bool has_pending_line = false;
 
-    printf("starting.....\n");
+    if (interactive) {
+        printf("starting.....\n");
+    }
+
     for (;;) {
-        printf("~");
+
+        if (interactive) printf("~");
+
         if (has_pending_line) {
             snprintf(line, sizeof(line), "%s", pending_line);
             has_pending_line = false;
         } else {
-            int read_status = read_input_line(line, sizeof(line));
-            if (read_status < 0) {
-                break;
-            }
+            int read_status = read_input_line(input, line, sizeof(line));
+
+            if (read_status < 0) break;
+
             if (read_status == 0) {
                 source[0] = '\0';
                 continue;
@@ -144,87 +180,114 @@ int main(void) {
         if (!append_line(source, sizeof(source), line)) {
             continue;
         }
+
         int depth = brace_depth(source);
+
         if (depth < 0) {
             printf("parser error: unexpected '}'\n");
             source[0] = '\0';
             continue;
         }
+
         while (depth > 0) {
-            printf("~");
-            int read_status = read_input_line(line, sizeof(line));
+
+            if (interactive) printf("~");
+
+            int read_status = read_input_line(input, line, sizeof(line));
+
             if (read_status <= 0) {
                 if (read_status < 0) {
                     printf("parser error: incomplete block at end of input\n");
                 }
+
                 source[0] = '\0';
                 break;
             }
+
             if (!append_line(source, sizeof(source), line)) {
                 source[0] = '\0';
                 depth = 0;
                 break;
             }
+
             depth = brace_depth(source);
+
             if (depth < 0) {
                 printf("parser error: unexpected '}'\n");
                 source[0] = '\0';
                 break;
             }
         }
+
         if (source[0] == '\0' || depth != 0) {
             continue;
         }
 
         if (begins_with_keyword(source, "if")) {
+
             for (;;) {
-                printf("~");
-                int read_status = read_input_line(line, sizeof(line));
-                if (read_status < 0) {
-                    break;
-                }
+
+                if (interactive) printf("~");
+
+                int read_status = read_input_line(input, line, sizeof(line));
+
+                if (read_status < 0) break;
+
                 if (read_status == 0) {
                     source[0] = '\0';
                     break;
                 }
+
                 if (!begins_with_keyword(line, "else")) {
                     snprintf(pending_line, sizeof(pending_line), "%s", line);
                     has_pending_line = true;
                     break;
                 }
+
                 if (!append_line(source, sizeof(source), line)) {
                     source[0] = '\0';
                     break;
                 }
+
                 depth = brace_depth(source);
+
                 if (depth < 0) {
                     printf("parser error: unexpected '}'\n");
                     source[0] = '\0';
                     break;
                 }
+
                 while (depth > 0) {
-                    printf("~");
-                    read_status = read_input_line(line, sizeof(line));
+
+                    if (interactive) printf("~");
+
+                    read_status = read_input_line(input, line, sizeof(line));
+
                     if (read_status <= 0) {
                         if (read_status < 0) {
                             printf("parser error: incomplete block at end of input\n");
                         }
+
                         source[0] = '\0';
                         depth = 0;
                         break;
                     }
+
                     if (!append_line(source, sizeof(source), line)) {
                         source[0] = '\0';
                         depth = 0;
                         break;
                     }
+
                     depth = brace_depth(source);
+
                     if (depth < 0) {
                         printf("parser error: unexpected '}'\n");
                         source[0] = '\0';
                         break;
                     }
                 }
+
                 if (depth != 0 || !strstr(source, "else")) {
                     break;
                 }
@@ -234,8 +297,14 @@ int main(void) {
         execute_source(source);
         source[0] = '\0';
     }
+
     if (source[0] != '\0') {
         execute_source(source);
     }
+
+    if (input != stdin) {
+        fclose(input);
+    }
+
     return 0;
 }

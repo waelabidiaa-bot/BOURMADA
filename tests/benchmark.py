@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run repeatable interpreter benchmarks and report wall-clock timings."""
+"""Run repeatable Bourmada benchmarks and report wall-clock timings."""
 
 import argparse
 import statistics
@@ -10,13 +10,13 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-INTERPRETER = ROOT / "bin" / "interpter_inC"
+INTERPRETER = ROOT / "bin" / "bourmada"
 WORKLOADS = (
-    ("loop (1,000,000 iterations)", ROOT / "tests" / "performance.lang", 1_000_000),
-    ("function calls (10,000 calls)", ROOT / "tests" / "benchmark_functions.lang", 10_000),
-    ("factorial_recursive (10)", ROOT / "tests" / "recursion.lang", 3628800),
-    ("fibonacci_recursive (30)", ROOT / "tests" / "fibonacci.lang", 832040),
-    ("variable_benchmark (10,000 iterations)", ROOT / "tests" / "variables_benchmark.lang", 150,10_000),
+    ("loop (1,000,000 iterations)", ROOT / "tests" / "performance.bmd", 1_000_000, 1_000_000),
+    ("function calls (10,000 calls)", ROOT / "tests" / "benchmark_functions.bmd", 10_000, 10_000),
+    ("factorial_recursive (10)", ROOT / "tests" / "recursion.bmd", 3628800, 10),
+    ("fibonacci_recursive (30)", ROOT / "tests" / "fibonacci.bmd", 832040, 30),
+    ("variable benchmark (1,000,000 iterations)", ROOT / "tests" / "variables_benchmark.bmd", 150, 1_000_000),
 )
 
 
@@ -65,19 +65,19 @@ def main() -> int:
     if args.runs < 1:
         parser.error("--runs must be at least 1")
     if not INTERPRETER.is_file():
-        print("Interpreter executable not found; build it first with `make`.", file=sys.stderr)
+        print("Bourmada executable not found; build it first with `make`.", file=sys.stderr)
         return 1
 
-    print(f"Interpreter: {INTERPRETER.relative_to(ROOT)}")
+    print(f"Bourmada: {INTERPRETER.relative_to(ROOT)}")
     print(f"Runs per workload: {args.runs}")
     print("Times include process startup, lexing, parsing, and evaluation.\n")
 
     try:
-        for label, source_path, iterations in WORKLOADS:
-            timings = run_benchmark(source_path, iterations, args.runs)
+        for label, source_path, expected_result, workload_iterations in WORKLOADS:
+            timings = run_benchmark(source_path, expected_result, args.runs)
             median = statistics.median(timings)
             minimum = min(timings)
-            rate = iterations / median if median > 0 else float("inf")
+            rate = workload_iterations / median if median > 0 else float("inf")
             print(
                 f"{label}: median {median:.6f}s, "
                 f"best {minimum:.6f}s, {rate:,.0f} workload iterations/s"

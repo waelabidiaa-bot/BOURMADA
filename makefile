@@ -6,7 +6,7 @@ SRC_DIR := src
 OBJ_DIR := dir
 BIN_DIR := bin
 
-TARGET := $(BIN_DIR)/interpter_inC
+TARGET := $(BIN_DIR)/bourmada
 
 SRCS := $(shell find $(SRC_DIR) -name "*.c")
 OBJS := $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)

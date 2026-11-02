@@ -1,20 +1,26 @@
-# C Interpreter
+# Bourmada
 
-A small C interpreter for learning language implementation. It tokenizes
-input, parses it into an AST, evaluates expressions and statements, and keeps
-top-level variables and function definitions available in the REPL.
+![Bourmada logo](./icon/bourmada.svg)
+
+**Bourmada is an experimental programming language under development.**
+This repository contains its C implementation: a small interpreter that
+tokenizes source, parses it into an AST, evaluates expressions and statements,
+and keeps top-level variables and function definitions available in the REPL.
+The language and implementation are evolving, so syntax, behavior, and limits
+may change.
 
 ## Build and run
 
 ```sh
 make
-./bin/interpter_inC
+./bin/bourmada
 ```
 
-The program reads from standard input. Run a source file by redirecting it:
+Start the interactive REPL by running the executable without a filename. To
+run a Bourmada source file:
 
 ```sh
-./bin/interpter_inC < tests/example.lang
+./bin/bourmada tests/example.bmd
 ```
 
 ## Benchmarks
@@ -38,7 +44,6 @@ the same machine/build and compare repeated runs for useful comparisons.
 
 The REPL collects multiple lines while a `{ ... }` block is open. An `else`
 can follow the closing brace on the same line or on the next line.
-When input is redirected from a file, REPL prompts still appear in the output.
 
 ## Language features
 
@@ -60,10 +65,10 @@ When input is redirected from a file, REPL prompts still appear in the output.
   evaluation errors; division-by-zero and integer-overflow checks.
 
 For syntax and runnable examples, see [examples/syn.txt](./examples/syn.txt).
-The [tests/](./tests/) folder contains example programs, including
-[recursion.lang](./tests/recursion.lang).
+The [tests/](./tests/) folder contains example Bourmada programs, including
+[recursion.bmd](./tests/recursion.bmd).
 
-## Current limitations and known flaws
+## Current limitations
 
 - Only `int`, `str`, and `bool` are implemented. There are no floats, arrays,
   objects, or user-defined types.
@@ -86,15 +91,12 @@ The [tests/](./tests/) folder contains example programs, including
   512 tokens per submitted input, 200 variables, 64 functions, 64 arguments per
   function call, 128 nested scopes, a 4096-byte REPL line buffer, and a
   16384-byte accumulated program buffer.
-- Successful expressions may be echoed by the REPL using `>>>`. The REPL
-  prompt remains visible when running a redirected source file, so output is
-  not a clean batch-mode transcript.
+- Successful expressions may be echoed by the REPL using `>>>`.
 - There is no dedicated unit/regression test runner yet. The benchmark runner
   under `tests/` is for performance comparisons and checks workload results.
 
-These are current project limitations, not promises about future versions.
+## Development note
 
-
-
-## notice
-if go through the code you will realize i didnt use any advanced algorithms i just did the logic with naive solutions for one its very complex and tudious  for me two i want to grasp the logic and how it all works and then later optimize using good and well srtuctured algorithms 
+Bourmada is a learning project. Its interpreter currently favors straightforward
+implementations to make the language-processing logic easier to understand;
+more advanced algorithms and optimizations can come later.

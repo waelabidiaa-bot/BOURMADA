@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="360" viewBox="0 0 960 360" role="img" aria-labelledby="title description">
+  <title id="title">Bourmada bear logo</title>
+  <desc id="description">A friendly black-and-white hand-drawn bear head and the Bourmada wordmark.</desc>
+  <rect x="18" y="18" width="324" height="324" rx="72" fill="#fff" stroke="#111" stroke-width="4"/>
+
+  <g stroke="#111" stroke-linecap="round" stroke-linejoin="round">
+    <ellipse cx="108" cy="85" rx="31" ry="31" fill="#fff" stroke-width="8"/>
+    <ellipse cx="260" cy="85" rx="31" ry="31" fill="#fff" stroke-width="8"/>
+    <ellipse cx="108" cy="85" rx="16" ry="17" fill="#fff" stroke-width="3"/>
+    <ellipse cx="260" cy="85" rx="16" ry="17" fill="#fff" stroke-width="3"/>
+
+    <path d="M184 68c-64 0-108 34-113 91-5 51 18 94 58 112 17 8 36 11 55 11s38-3 55-11c40-18 63-61 58-112-5-57-49-91-113-91z" fill="#fff" stroke-width="9"/>
+    <path d="M127 124c10-8 22-9 33-3m47 0c11-6 23-5 33 3" fill="none" stroke-width="3"/>
+    <ellipse cx="145" cy="146" rx="12" ry="15" fill="#fff" stroke-width="2.5"/>
+    <ellipse cx="223" cy="146" rx="12" ry="15" fill="#fff" stroke-width="2.5"/>
+    <ellipse cx="148" cy="145" rx="6.5" ry="9.5" fill="#111" stroke="none"/>
+    <ellipse cx="220" cy="145" rx="6.5" ry="9.5" fill="#111" stroke="none"/>
+    <circle cx="150" cy="141" r="3" fill="#fff" stroke="none"/>
+    <circle cx="222" cy="141" r="3" fill="#fff" stroke="none"/>
+
+    <ellipse cx="184" cy="204" rx="39" ry="20" fill="#fff" stroke-width="2.5"/>
+    <path d="M170 189c2-7 7-11 14-11s12 4 14 11c-2 7-7 11-14 11s-12-4-14-11z" fill="#111" stroke-width="2"/>
+    <path d="M184 199v11m0 0c-5 7-12 10-19 10-7 0-12-3-16-8m35-2c5 7 12 10 19 10 7 0 12-3 16-8" fill="none" stroke-width="3.5"/>
+  </g>
+
+  <text x="386" y="207" fill="#111" font-family="Trebuchet MS, ui-rounded, Arial, sans-serif" font-size="82" font-weight="800" letter-spacing="-3">Bourmada</text>
+</svg>

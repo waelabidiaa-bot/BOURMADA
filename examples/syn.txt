@@ -1,20 +1,24 @@
-C INTERPRETER: LANGUAGE GUIDE
-============================
+B O U R M A D A
+==============
+LANGUAGE GUIDE
+=============
 
-This guide describes the syntax currently implemented by the interpreter.
-Examples are entered at the REPL prompt or saved in a .lang file and piped in:
+This guide describes the syntax currently implemented by Bourmada, a
+programming language under development. The interpreter is written in C.
+Examples are entered at the REPL prompt or saved in a .bmd source file:
 
     make
-    ./bin/interpter_inC < tests/example.lang
+    ./bin/bourmada tests/example.bmd
 
 Run the performance benchmarks with `make benchmark`, or use
 `python3 tests/benchmark.py --runs 10` to choose the number of repetitions.
 Benchmarks report median and best wall-clock times after checking the workload
 results.
 
-The REPL accepts expressions and statements one line at a time. It collects
-input until a block's braces are balanced. Statements do not need semicolons;
-semicolons may be used as separators.
+Bourmada is experimental and may change as its design develops. The REPL
+accepts expressions and statements one line at a time. It collects input until
+a block's braces are balanced. Statements do not need semicolons; semicolons
+may be used as separators.
 
 
 COMMENTS AND LITERALS
@@ -212,8 +216,8 @@ error.
 ERRORS AND EXECUTION BEHAVIOR
 -----------------------------
 
-The interpreter reports lexer, parser, variable, type, function, scope, and
-evaluation errors. Examples include:
+Bourmada reports lexer, parser, variable, type, function, scope, and evaluation
+errors. Examples include:
 
     print(missing)                  // undefined variable
     let int bad = "text"            // type mismatch
