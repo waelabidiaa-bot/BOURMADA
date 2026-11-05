@@ -3,4 +3,4 @@ Benchmark: loop (10,000,000 iterations)
 Runs: 5
 Times include process startup, lexing, parsing, and evaluation.
 
-loop (10,000,000 iterations): median 3.601333s, best 3.251377s, 277,675 workload iterations/s
+loop (10,000,000 iterations): median 1.546520s, best 1.537176s, 646,613 workload iterations/s

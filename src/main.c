@@ -87,21 +87,21 @@ static int read_input_line(FILE *input, char *line, size_t capacity) {
 
 static bool should_echo_result(astnode *program) {
     astnode *last = program;
-    while (last != NULL && strcmp(last->type, "sequence") == 0 &&
+    while (last != NULL && last->kind == AST_NODE_SEQUENCE &&
            last->right != NULL) {
         last = last->right;
     }
-    if (last == NULL || strcmp(last->type, "sequence") != 0 ||
+    if (last == NULL || last->kind != AST_NODE_SEQUENCE ||
         last->left == NULL) {
         return false;
     }
-    const char *type = last->left->type;
-    return strcmp(type, "print") != 0 &&
-           strcmp(type, "function") != 0 &&
-           strcmp(type, "if") != 0 &&
-           strcmp(type, "while") != 0 &&
-           strcmp(type, "return") != 0 &&
-           strcmp(type, "break") != 0;
+    astnode_kind kind = last->left->kind;
+    return kind != AST_NODE_PRINT &&
+           kind != AST_NODE_FUNCTION &&
+           kind != AST_NODE_IF &&
+           kind != AST_NODE_WHILE &&
+           kind != AST_NODE_RETURN &&
+           kind != AST_NODE_BREAK;
 }
 
 static void execute_source(char *source, int starting_line) {

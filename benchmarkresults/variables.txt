@@ -3,4 +3,4 @@ Benchmark: variable benchmark (1,000,000 iterations)
 Runs: 5
 Times include process startup, lexing, parsing, and evaluation.
 
-variable benchmark (1,000,000 iterations): median 1.516486s, best 1.347729s, 659,419 workload iterations/s
+variable benchmark (1,000,000 iterations): median 0.559320s, best 0.524843s, 1,787,886 workload iterations/s

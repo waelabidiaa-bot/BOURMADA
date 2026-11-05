@@ -7,23 +7,30 @@
 
 typedef struct {
     int variable_index;
-    bool occupied;
+    unsigned char state;
 } variable_hash_entry;
+
+enum {
+    HASH_EMPTY,
+    HASH_OCCUPIED,
+    HASH_DELETED
+};
 
 variable vars[MAX_VARS];
 int var_count = 0;
 static variable_hash_entry variable_hash[VARIABLE_HASH_CAPACITY];
+static int deleted_hash_entries;
 
 typedef struct {
     int id;
     int parent_id;
     int return_id;
+    int variable_start;
 } scope_frame;
 
 static scope_frame scope_stack[MAX_SCOPE_DEPTH];
 static int scope_depth;
 static int current_scope;
-static int next_scope_id = 1;
 
 static unsigned long hash_variable_key(const char *name, int scope) {
     unsigned long hash = 5381;
@@ -36,43 +43,63 @@ static unsigned long hash_variable_key(const char *name, int scope) {
 
 static int find_variable_slot(const char *name, int scope, bool *found) {
     unsigned long index = hash_variable_key(name, scope);
+    int first_deleted = -1;
     for (int probes = 0; probes < VARIABLE_HASH_CAPACITY; probes++) {
         variable_hash_entry *entry = &variable_hash[index];
-        if (!entry->occupied) {
+        if (entry->state == HASH_EMPTY) {
             *found = false;
-            return (int)index;
+            return first_deleted >= 0 ? first_deleted : (int)index;
         }
-        variable *candidate = &vars[entry->variable_index];
-        if (candidate->scope == scope && strcmp(candidate->name, name) == 0) {
-            *found = true;
-            return (int)index;
+        if (entry->state == HASH_DELETED) {
+            if (first_deleted < 0) {
+                first_deleted = (int)index;
+            }
+        } else {
+            variable *candidate = &vars[entry->variable_index];
+            if (candidate->scope == scope &&
+                strcmp(candidate->name, name) == 0) {
+                *found = true;
+                return (int)index;
+            }
         }
         index = (index + 1) % VARIABLE_HASH_CAPACITY;
     }
     *found = false;
-    return -1;
+    return first_deleted;
 }
 
-static int find_variable(const char *name, int scope) {
-    while (scope >= 0) {
+static void remove_variable_index(int variable_index) {
+    variable *removed = &vars[variable_index];
+    unsigned long index = hash_variable_key(removed->name, removed->scope);
+    for (int probes = 0; probes < VARIABLE_HASH_CAPACITY; probes++) {
+        variable_hash_entry *entry = &variable_hash[index];
+        if (entry->state == HASH_EMPTY) {
+            return;
+        }
+        if (entry->state == HASH_OCCUPIED &&
+            entry->variable_index == variable_index) {
+            entry->state = HASH_DELETED;
+            return;
+        }
+        index = (index + 1) % VARIABLE_HASH_CAPACITY;
+    }
+}
+
+static int find_variable(const char *name) {
+    for (int i = scope_depth - 1; i >= 0; i--) {
         bool found;
-        int slot = find_variable_slot(name, scope, &found);
+        int slot = find_variable_slot(name, scope_stack[i].id, &found);
         if (found) {
             return variable_hash[slot].variable_index;
         }
-        if (scope == 0) {
+        if (scope_stack[i].parent_id == 0) {
             break;
         }
-        int parent_scope = -1;
-        for (int i = scope_depth - 1; i >= 0; i--) {
-            if (scope_stack[i].id == scope) {
-                parent_scope = scope_stack[i].parent_id;
-                break;
-            }
-        }
-        scope = parent_scope;
     }
-    return -1;
+
+    bool found;
+    int slot = find_variable_slot(name, 0, &found);
+    return found ? variable_hash[slot].variable_index : -1;
 }
 
 static bool index_variable(int variable_index) {
@@ -83,12 +110,13 @@ static bool index_variable(int variable_index) {
         return false;
     }
     variable_hash[slot].variable_index = variable_index;
-    variable_hash[slot].occupied = true;
+    variable_hash[slot].state = HASH_OCCUPIED;
     return true;
 }
 
 static bool rebuild_variable_hash(void) {
     memset(variable_hash, 0, sizeof(variable_hash));
+    deleted_hash_entries = 0;
     for (int i = 0; i < var_count; i++) {
         if (!index_variable(i)) {
             return false;
@@ -109,7 +137,7 @@ static void report_error(int source_line, const char *problem,
 }
 
 static bool push_scope(int parent_id, int source_line, const char *suggestion) {
-    if (scope_depth >= MAX_SCOPE_DEPTH || next_scope_id == 0) {
+    if (scope_depth >= MAX_SCOPE_DEPTH) {
         char problem[128];
         snprintf(problem, sizeof(problem),
                  "We've hit the maximum nesting depth (%d scopes).", MAX_SCOPE_DEPTH);
@@ -118,9 +146,10 @@ static bool push_scope(int parent_id, int source_line, const char *suggestion) {
     }
 
     scope_frame *frame = &scope_stack[scope_depth++];
-    frame->id = next_scope_id++;
+    frame->id = scope_depth;
     frame->parent_id = parent_id;
     frame->return_id = current_scope;
+    frame->variable_start = var_count;
     current_scope = frame->id;
     return true;
 }
@@ -141,11 +170,14 @@ void leave_scope(void) {
     }
 
     scope_frame frame = scope_stack[--scope_depth];
-    while (var_count > 0 && vars[var_count - 1].scope == frame.id) {
+    while (var_count > frame.variable_start) {
+        remove_variable_index(var_count - 1);
+        deleted_hash_entries++;
         var_count--;
     }
-    if (!rebuild_variable_hash()) {
-        report_error(0, "I couldn't rebuild the variable lookup table after leaving a scope.",
+    if (deleted_hash_entries >= VARIABLE_HASH_CAPACITY / 4 &&
+        !rebuild_variable_hash()) {
+        report_error(0, "I couldn't compact the variable lookup table.",
                      "please simplify the current scope nesting and try again.");
     }
     current_scope = frame.return_id;
@@ -187,7 +219,7 @@ bool declare_var(const char *name, variable_value value, int source_line) {
 }
 
 bool set_var(const char *name, variable_value value, int source_line) {
-    int index = find_variable(name, current_scope);
+    int index = find_variable(name);
     if (index >= 0) {
         if (strcmp(vars[index].value.type, value.type) != 0) {
             char problem[200];
@@ -209,7 +241,7 @@ bool set_var(const char *name, variable_value value, int source_line) {
 }
 
 bool get_var(const char *name, variable_value *value, int source_line) {
-    int index = find_variable(name, current_scope);
+    int index = find_variable(name);
     if (index >= 0) {
         *value = vars[index].value;
         return true;

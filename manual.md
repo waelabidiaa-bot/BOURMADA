@@ -75,7 +75,13 @@ print(value) // 1
 those scopes disappear when the block exits. Function parameters and local
 variables exist only during that call. Functions can access global variables,
 but not variables local to their caller. Top-level variables remain available
-for later input in the same REPL session.
+for later input in the same REPL session. Local variable slots are reclaimed
+automatically when a block or function exits, including when execution returns
+early or breaks from a loop.
+
+The interpreter also frees each submitted program's tokens and syntax tree
+after evaluation. Function definitions are retained for the REPL session, and
+table storage and retained functions are released when the interpreter exits.
 
 ## Expressions and operators
 

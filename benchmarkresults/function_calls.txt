@@ -3,4 +3,4 @@ Benchmark: function calls (10,000 calls)
 Runs: 5
 Times include process startup, lexing, parsing, and evaluation.
 
-function calls (10,000 calls): median 0.010320s, best 0.009418s, 969,010 workload iterations/s
+function calls (10,000 calls): median 0.005455s, best 0.004938s, 1,833,154 workload iterations/s

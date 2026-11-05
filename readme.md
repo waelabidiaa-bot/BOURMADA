@@ -2,112 +2,70 @@
 
 ![Bourmada logo](./icon/bourmada.svg)
 
-**Bourmada is an experimental programming language under development.**
-This repository contains its C implementation: a small interpreter that
-tokenizes source, parses it into an AST, evaluates expressions and statements,
-and keeps top-level variables and function definitions available in the REPL.
-The language and implementation are evolving, so syntax, behavior, and limits
-may change.
+**Bourmada is an experimental programming language implemented in C.** This
+repository contains its interpreter, language reference, runnable programs,
+and performance benchmarks.
 
-## Build and run
+## Wiki pages
+
+| Page | Description |
+|---|---|
+| [Language manual](./manual.md) | Syntax, types, control flow, functions, tables, scope, and limits |
+| [Architecture](./docs/architecture.md) | Interpreter pipeline and the responsibilities of each module |
+| [Memory management](./docs/memory-management.md) | Allocation ownership and automatic lifetime management |
+| [Performance and benchmarks](./docs/performance.md) | Hot-path optimizations and how to measure workloads |
+| [Syntax quick reference](./examples/syn.txt) | Compact examples of the language syntax |
+| [Runnable examples and tests](./tests/) | Example programs and benchmark workloads |
+
+### Benchmark reports
+
+- [While loop](./benchmarkresults/loop.txt)
+- [For loop](./benchmarkresults/for_loop.txt)
+- [Function calls](./benchmarkresults/function_calls.txt)
+- [Recursive factorial](./benchmarkresults/factorial_recursive.txt)
+- [Recursive Fibonacci](./benchmarkresults/fibonacci_recursive.txt)
+- [Variable access](./benchmarkresults/variables.txt)
+
+## Quick start
+
+Build and start the interactive interpreter:
 
 ```sh
 make
 ./bin/bourmada
 ```
 
-Start the interactive REPL by running the executable without a filename. To
-run a Bourmada source file:
+Run a source file:
 
 ```sh
 ./bin/bourmada tests/example.bmd
 ```
 
-## Benchmarks
-
-Build and run the benchmark workloads with:
+Run the performance suite:
 
 ```sh
 make benchmark
 ```
 
-Or choose the number of timed repetitions:
-
-```sh
-python3 tests/benchmark.py --runs 10
-```
-
-The suite measures a one-million-iteration loop and 10,000 function calls.
-It checks each workload's result before reporting median and best wall-clock
-times. Timings include process startup, lexing, parsing, and evaluation; use
-the same machine/build and compare repeated runs for useful comparisons. Each
-workload's report is saved separately in `benchmarkresults/`, named after the
-benchmark (for example, `for_loop.txt`).
-
 The REPL collects multiple lines while a `{ ... }` block is open. An `else`
 can follow the closing brace on the same line or on the next line.
 
-## Language features
+## At a glance
 
-- **Comments:** `//` to end of line, including inline comments. `//` inside a
-  quoted string is ordinary text.
-- **Values and variables:** `int`, `str`, and `bool`; explicit declarations
-  (`let int count = 1`) and inferred declarations (`let count = 1`); assignment
-  to existing variables.
-- **Expressions:** integer `+`, `-`, `*`, `/`; parentheses and unary minus;
-  comparisons `==`, `!=`, `<`, `>`, `<=`, `>=`; logical `&&`, `||`, and `!`.
-- **Output:** `print(expression)`.
-- **Control flow:** `if`, `else if`, `else`, `while`, `for`, and `break`.
-- **Tables:** typed schemas, named-field inserts, row updates/deletes, and
-  zero-based row/column reads.
-- **Functions:** `fn return_type name(parameters) { ... }`, optional parameter
-  types, return values, function calls, and recursion.
-- **Scope:** block-local variables in branches and loop bodies; function-local
-  parameters and variables; nested declarations can shadow outer names.
-- Variable lookup uses a hash table with linear probing, keyed by variable name
-  and scope, so nested scopes can safely shadow outer declarations.
-- **Diagnostics:** lexer, parser, type, variable, scope, function, and
-  evaluation errors; division-by-zero and integer-overflow checks.
+- **Values:** `int`, `str`, and `bool`.
+- **Expressions:** arithmetic, comparisons, and short-circuit logical
+  operators.
+- **Control flow:** `if`/`else`, `while`, `for`, and `break`.
+- **Functions:** typed return values, optional parameter types, and recursion.
+- **Tables:** typed columns, named-field inserts, updates, deletes, and reads.
+- **Scope:** nested blocks can shadow names; function calls cannot access
+  variables local to their caller.
+- **Memory:** local variable slots are reclaimed when their scopes end;
+  temporary tokens and syntax trees are freed after each submitted program.
 
-For syntax and runnable examples, see [examples/syn.txt](./examples/syn.txt).
-The full language reference is in [manual.md](./manual.md). The [tests/](./tests/)
-folder contains runnable Bourmada programs, including
-[recursion.bmd](./tests/recursion.bmd) and [tables.bmd](./tests/tables.bmd).
-
-## Current limitations
-
-- Only `int`, `str`, and `bool` are implemented. There are no floats, arrays,
-  objects, or user-defined types.
-- Strings are limited to 24 characters. Escape sequences, multiline strings,
-  and string concatenation are not supported.
-- Arithmetic is integer-only; there is no modulo operator.
-- Control flow has `if` branches, `while`, `for`, and `break`, but no
-  `continue`.
-- Variables need an initializer. There are no constants, default arguments,
-  named arguments, void functions, or prototypes/forward declarations.
-- There is no static type-checking pass; most type errors are reported at
-  runtime.
-- Functions must be defined before they are called.
-- Tables support up to 32 definitions, 32 columns, and 256 rows per table.
-- Conditions accept booleans and integers (zero is false, non-zero is true).
-  `!` requires a boolean; comparisons like `<` and `>` require integers.
-- Variable and scope errors include a source line and a friendly suggestion.
-  Other diagnostic categories do not yet include source locations. A lexer
-  error rejects the submitted input; a parse error prevents it from executing;
-  a runtime error stops the rest of the current execution sequence.
-- Current implementation limits: 24-character identifiers and string values,
-  512 tokens per submitted input, 200 variables, 64 functions, 64 arguments per
-  function call, 128 nested scopes, a 4096-byte REPL line buffer, and a
-  16384-byte accumulated program buffer.
-- Successful expressions may be echoed by the REPL using `>>>`.
-- There is no dedicated unit/regression test runner yet. The benchmark runner
-  under `tests/` is for performance comparisons and checks workload results.
-
-## Development note
-
-Bourmada is a learning project. Its interpreter currently favors straightforward
-implementations to make the language-processing logic easier to understand;
-more advanced algorithms and optimizations can come later.
+The interpreter is a learning project and its language and implementation
+limits may change. See the [manual](./manual.md) for the full language
+reference and current limits.
 
 ## License
 

@@ -229,7 +229,7 @@ variable_value evaluation(astnode *node) {
     if (node == NULL) {
         return invalid_value();
     }
-    if (strcmp(node->type, "number") == 0) {
+    if (node->kind == AST_NODE_NUMBER) {
         errno = 0;
         char *end = NULL;
         long parsed = strtol(node->value, &end, 10);
@@ -240,10 +240,10 @@ variable_value evaluation(astnode *node) {
         }
         return integer_value((int)parsed);
     }
-    if (strcmp(node->type, "string") == 0) {
+    if (node->kind == AST_NODE_STRING) {
         return string_value(node->value);
     }
-    if (strcmp(node->type, "table_declaration") == 0) {
+    if (node->kind == AST_NODE_TABLE_DECLARATION) {
         const char *column_names[MAX_TABLE_COLUMNS];
         const char *column_types[MAX_TABLE_COLUMNS];
         int count = 0;
@@ -260,7 +260,7 @@ variable_value evaluation(astnode *node) {
         return table_create(node->value, column_names, column_types, count, node->line)
                    ? invalid_value() : failure_value();
     }
-    if (strcmp(node->type, "table_insert") == 0) {
+    if (node->kind == AST_NODE_TABLE_INSERT) {
         const char *field_names[MAX_TABLE_COLUMNS];
         variable_value values[MAX_TABLE_COLUMNS];
         int count = evaluate_table_fields(node->left, field_names, values);
@@ -270,7 +270,7 @@ variable_value evaluation(astnode *node) {
         return table_insert(node->value, field_names, values, count, node->line)
                    ? invalid_value() : failure_value();
     }
-    if (strcmp(node->type, "table_delete") == 0) {
+    if (node->kind == AST_NODE_TABLE_DELETE) {
         int index;
         if (!evaluate_table_index(node->left, node->line, &index)) {
             return failure_value();
@@ -278,7 +278,7 @@ variable_value evaluation(astnode *node) {
         return table_delete(node->value, index, node->line)
                    ? invalid_value() : failure_value();
     }
-    if (strcmp(node->type, "table_update") == 0) {
+    if (node->kind == AST_NODE_TABLE_UPDATE) {
         int index;
         if (!evaluate_table_index(node->left, node->line, &index)) {
             return failure_value();
@@ -292,7 +292,7 @@ variable_value evaluation(astnode *node) {
         return table_update(node->value, index, field_names, values, count, node->line)
                    ? invalid_value() : failure_value();
     }
-    if (strcmp(node->type, "table_access") == 0) {
+    if (node->kind == AST_NODE_TABLE_ACCESS) {
         int index;
         if (!evaluate_table_index(node->left, node->line, &index)) {
             return failure_value();
@@ -301,15 +301,14 @@ variable_value evaluation(astnode *node) {
         return table_get(node->value, index, node->right->value,
                          &value, node->line) ? value : failure_value();
     }
-    if (strcmp(node->type, "boolean") == 0) {
+    if (node->kind == AST_NODE_BOOLEAN) {
         return boolean_value(strcmp(node->value, "true") == 0);
     }
-    if (strcmp(node->type, "identifier") == 0 ||
-        strcmp(node->type, "var") == 0) {
+    if (node->kind == AST_NODE_IDENTIFIER || node->kind == AST_NODE_VAR) {
         variable_value value;
         return get_var(node->value, &value, node->line) ? value : failure_value();
     }
-    if (strcmp(node->type, "let") == 0) {
+    if (node->kind == AST_NODE_LET) {
         variable_value value = evaluation(node->right);
         if (!value.valid) {
             return value.failed ? value : failure_value();
@@ -323,14 +322,14 @@ variable_value evaluation(astnode *node) {
         return declare_var(node->left->value, value, node->line)
                    ? value : failure_value();
     }
-    if (strcmp(node->type, "assign") == 0) {
+    if (node->kind == AST_NODE_ASSIGN) {
         variable_value value = evaluation(node->right);
         if (!value.valid || !set_var(node->left->value, value, node->line)) {
             return value.failed ? value : failure_value();
         }
         return value;
     }
-    if (strcmp(node->type, "print") == 0) {
+    if (node->kind == AST_NODE_PRINT) {
         variable_value value = evaluation(node->right);
         if (!value.valid) {
             return value.failed ? value : failure_value();
@@ -339,7 +338,7 @@ variable_value evaluation(astnode *node) {
         printf("\n");
         return value;
     }
-    if (strcmp(node->type, "sequence") == 0) {
+    if (node->kind == AST_NODE_SEQUENCE) {
         variable_value result = invalid_value();
         for (astnode *entry = node; entry != NULL; entry = entry->right) {
             result = evaluation(entry->left);
@@ -349,7 +348,7 @@ variable_value evaluation(astnode *node) {
         }
         return result;
     }
-    if (strcmp(node->type, "function") == 0) {
+    if (node->kind == AST_NODE_FUNCTION) {
         astnode *copy = copy_ast(node);
         if (copy == NULL) {
             printf("function error: unable to store function '%s'\n", node->value);
@@ -372,10 +371,10 @@ variable_value evaluation(astnode *node) {
         functions[function_count++].definition = copy;
         return invalid_value();
     }
-    if (strcmp(node->type, "call") == 0) {
+    if (node->kind == AST_NODE_CALL) {
         return evaluate_call(node);
     }
-    if (strcmp(node->type, "return") == 0) {
+    if (node->kind == AST_NODE_RETURN) {
         variable_value result = evaluation(node->right);
         if (result.failed) {
             return result;
@@ -383,12 +382,12 @@ variable_value evaluation(astnode *node) {
         result.returned = true;
         return result;
     }
-    if (strcmp(node->type, "break") == 0) {
+    if (node->kind == AST_NODE_BREAK) {
         variable_value result = invalid_value();
         result.break_loop = true;
         return result;
     }
-    if (strcmp(node->type, "if") == 0) {
+    if (node->kind == AST_NODE_IF) {
         variable_value condition = evaluation(node->left);
         bool truth;
         if (!truth_value(condition, &truth)) {
@@ -396,14 +395,14 @@ variable_value evaluation(astnode *node) {
         }
         astnode *then_body = node->right;
         astnode *else_body = NULL;
-        if (then_body != NULL && strcmp(then_body->type, "branches") == 0) {
+        if (then_body != NULL && then_body->kind == AST_NODE_BRANCHES) {
             else_body = then_body->right;
             then_body = then_body->left;
         }
         return truth ? evaluate_scoped(then_body, node->line)
                      : evaluate_scoped(else_body, node->line);
     }
-    if (strcmp(node->type, "while") == 0) {
+    if (node->kind == AST_NODE_WHILE) {
         variable_value result = invalid_value();
         for (;;) {
             variable_value condition = evaluation(node->left);
@@ -427,7 +426,7 @@ variable_value evaluation(astnode *node) {
             }
         }
     }
-    if (strcmp(node->type, "for") == 0) {
+    if (node->kind == AST_NODE_FOR) {
         astnode *header = node->left;
         if (!enter_scope(node->line)) {
             return failure_value();
@@ -478,7 +477,7 @@ variable_value evaluation(astnode *node) {
             }
         }
     }
-    if (strcmp(node->type, "unary") == 0) {
+    if (node->kind == AST_NODE_UNARY) {
         variable_value operand = evaluation(node->right);
         if (!operand.valid) {
             return operand.failed ? operand : failure_value();
@@ -492,7 +491,7 @@ variable_value evaluation(astnode *node) {
         printf("type error: invalid operand for unary '%s'\n", node->value);
         return failure_value();
     }
-    if (strcmp(node->type, "operator") == 0) {
+    if (node->kind == AST_NODE_OPERATOR) {
         variable_value left = evaluation(node->left);
         if (!left.valid) {
             return left.failed ? left : failure_value();
